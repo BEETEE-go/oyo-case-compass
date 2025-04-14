@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -21,8 +20,8 @@ import {
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { uploadToSharePoint, listSharePointFiles } from '@/utils/sharepoint';
 
-// Define schema for form validation
 const formSchema = z.object({
   displayName: z.string().min(2, "Display name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
@@ -38,8 +37,8 @@ type FormValues = z.infer<typeof formSchema>;
 const SettingsPage: React.FC = () => {
   const [testingConnection, setTestingConnection] = useState(false);
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null);
-  
-  // Initialize form with default values
+  const [sharepointPath, setSharepointPath] = useState('');
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -54,7 +53,6 @@ const SettingsPage: React.FC = () => {
   });
 
   const handleSaveSettings = (values: FormValues) => {
-    // In a real application, this would save to localStorage or a backend
     console.log('Settings saved', values);
     toast({
       title: "Settings saved",
@@ -63,7 +61,6 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleExportAll = () => {
-    // In a real application, this would trigger an export
     toast({
       title: "Export initiated",
       description: "All data is being exported to Microsoft Access format."
@@ -71,7 +68,6 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleImportData = () => {
-    // In a real application, this would trigger an import
     toast({
       title: "Import initiated",
       description: "Preparing to import data from Microsoft Access."
@@ -81,10 +77,9 @@ const SettingsPage: React.FC = () => {
   const handleTestConnection = () => {
     setTestingConnection(true);
     
-    // Simulate a test connection
     setTimeout(() => {
       setTestingConnection(false);
-      const success = Math.random() > 0.3; // 70% chance of success for demo
+      const success = Math.random() > 0.3;
       
       if (success) {
         toast({
@@ -107,7 +102,6 @@ const SettingsPage: React.FC = () => {
       description: "Synchronizing data with Microsoft Access..."
     });
     
-    // Simulate sync process
     setTimeout(() => {
       const now = new Date();
       setLastSyncDate(now.toLocaleString());
@@ -117,6 +111,42 @@ const SettingsPage: React.FC = () => {
         description: "Data has been synchronized successfully."
       });
     }, 2000);
+  };
+
+  const handleSharePointUpload = async () => {
+    try {
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.onchange = async (e: any) => {
+        const file = e.target.files[0];
+        const result = await uploadToSharePoint(file, sharepointPath);
+        
+        toast({
+          title: 'File Uploaded',
+          description: `${file.name} uploaded to SharePoint`
+        });
+      };
+      fileInput.click();
+    } catch (error) {
+      toast({
+        title: 'Upload Failed',
+        description: 'Could not upload to SharePoint',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleListSharePointFiles = async () => {
+    try {
+      const files = await listSharePointFiles(sharepointPath);
+      console.log('SharePoint Files:', files);
+    } catch (error) {
+      toast({
+        title: 'List Files Failed',
+        description: 'Could not list SharePoint files',
+        variant: 'destructive'
+      });
+    }
   };
 
   return (
@@ -433,6 +463,30 @@ const SettingsPage: React.FC = () => {
                     <Button variant="outline" className="w-full">
                       <FileSearch className="mr-2 h-4 w-4" />
                       View Sync Log
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>SharePoint Integration</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormItem>
+                    <FormLabel>SharePoint Folder Path</FormLabel>
+                    <Input 
+                      value={sharepointPath}
+                      onChange={(e) => setSharepointPath(e.target.value)}
+                      placeholder="/Cases/Documents"
+                    />
+                  </FormItem>
+                  <div className="flex gap-2 mt-4">
+                    <Button onClick={handleSharePointUpload}>
+                      Upload to SharePoint
+                    </Button>
+                    <Button variant="outline" onClick={handleListSharePointFiles}>
+                      List Files
                     </Button>
                   </div>
                 </CardContent>
