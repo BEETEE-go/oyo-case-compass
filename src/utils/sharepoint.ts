@@ -1,6 +1,7 @@
 
 import * as MicrosoftGraph from '@microsoft/microsoft-graph-client';
 import * as msal from '@azure/msal-browser';
+import { DriveItem, Site } from '@microsoft/microsoft-graph-types';
 
 // Configure MSAL instance
 const msalConfig = {
@@ -13,7 +14,7 @@ const msalConfig = {
 
 const msalInstance = new msal.PublicClientApplication(msalConfig);
 
-export const authenticateSharePoint = async () => {
+export const authenticateSharePoint = async (): Promise<string> => {
   const loginRequest = {
     scopes: ['Files.ReadWrite', 'Sites.ReadWrite.All']
   };
@@ -27,7 +28,7 @@ export const authenticateSharePoint = async () => {
   }
 };
 
-export const uploadToSharePoint = async (file: File, folderPath: string) => {
+export const uploadToSharePoint = async (file: File, folderPath: string): Promise<DriveItem> => {
   const accessToken = await authenticateSharePoint();
   
   const client = MicrosoftGraph.Client.init({
@@ -50,7 +51,7 @@ export const uploadToSharePoint = async (file: File, folderPath: string) => {
   }
 };
 
-export const listSharePointFiles = async (folderPath: string) => {
+export const listSharePointFiles = async (folderPath: string): Promise<DriveItem[]> => {
   const accessToken = await authenticateSharePoint();
   
   const client = MicrosoftGraph.Client.init({
