@@ -1,14 +1,18 @@
 
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { BarChart3, ClipboardList, FileText, Home, Menu, Search, Settings, X } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { BarChart3, ClipboardList, Home, Menu, Search, Settings, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import UserMenu from '@/components/auth/UserMenu';
+import { useAuth } from '@/context/AuthContext';
 
 export const Sidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true);
   const isMobile = useIsMobile();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   // If on mobile, sidebar is closed by default
   React.useEffect(() => {
@@ -18,6 +22,11 @@ export const Sidebar: React.FC = () => {
       setIsOpen(true);
     }
   }, [isMobile]);
+
+  // If not authenticated, don't show sidebar
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -84,7 +93,7 @@ export const Sidebar: React.FC = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex flex-col gap-1 p-2">
+          <nav className="flex flex-col gap-1 p-2 flex-1">
             <NavItem to="/" icon={Home} label="Dashboard" />
             <NavItem to="/cases" icon={ClipboardList} label="Cases" />
             <NavItem to="/reports" icon={BarChart3} label="Reports" />
@@ -92,8 +101,11 @@ export const Sidebar: React.FC = () => {
           </nav>
 
           {/* Bottom section */}
-          <div className="mt-auto border-t border-gray-200 p-2">
-            <NavItem to="/settings" icon={Settings} label="Settings" />
+          <div className="border-t border-gray-200">
+            <nav className="p-2">
+              <NavItem to="/settings" icon={Settings} label="Settings" />
+            </nav>
+            <UserMenu />
           </div>
         </div>
       </aside>
