@@ -2,9 +2,7 @@
 import { gapi } from 'gapi-script';
 
 // Google Drive API configuration
-const API_KEY = 'AIzaSyDtw5HTCB6OFVwctXcJYuFdTatUHoR1Yxs';
-const CLIENT_ID = '222313442885-sqk6bfpecrssm9vnumla9tggulkmardf.apps.googleusercontent.com';
-const CLIENT_SECRET = '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';
+// These values should be stored in environment variables on a backend server
 const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
@@ -14,9 +12,13 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 export const initGoogleDriveApi = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     gapi.load('client:auth2', () => {
+      // Use environment variables or secure backend for these values
+      const apiKey = process.env.REACT_APP_GOOGLE_API_KEY || '';
+      const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+      
       gapi.client.init({
-        apiKey: API_KEY,
-        clientId: CLIENT_ID,
+        apiKey: apiKey,
+        clientId: clientId,
         discoveryDocs: DISCOVERY_DOCS,
         scope: SCOPES
       }).then(() => {
