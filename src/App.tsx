@@ -15,7 +15,7 @@ import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with your actual client ID
+const GOOGLE_CLIENT_ID = '222313442885-sqk6bfpecrssm9vnumla9tggulkmardf.apps.googleusercontent.com';
 
 const App = () => (
   <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>

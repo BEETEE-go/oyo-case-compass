@@ -2,8 +2,9 @@
 import { gapi } from 'gapi-script';
 
 // Google Drive API configuration
-const API_KEY = 'YOUR_GOOGLE_API_KEY'; // Replace with your Google API key
-const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with your Google Client ID
+const API_KEY = 'YOUR_GOOGLE_API_KEY'; // This still needs to be replaced with a valid API key
+const CLIENT_ID = '222313442885-sqk6bfpecrssm9vnumla9tggulkmardf.apps.googleusercontent.com';
+const CLIENT_SECRET = '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';
 const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
