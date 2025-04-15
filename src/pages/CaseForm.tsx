@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -16,17 +15,26 @@ import {
   getAllComplaintTypes, 
   getAllCaseStatuses 
 } from '@/data/mockData';
-import { Calendar, Clock, FileUp, Save, X } from 'lucide-react';
+import { Calendar, Clock, FileUp, Save, X, Upload } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+import { useCases } from '@/hooks/use-cases';
+import { useAuth } from '@/context/AuthContext';
+import { useRoles } from '@/hooks/use-roles';
 
 const CaseForm: React.FC = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+  const { isAdmin } = useRoles();
+  const { createCase, addDocumentToCase, loading } = useCases();
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     complainantName: '',
     complainantContact: '',
     relatedParties: '',
-    investigator: '',
+    investigator: user?.displayName || '',
     openDate: new Date().toISOString().split('T')[0],
     closeDate: '',
     complaintType: 'Individual',
@@ -35,6 +43,8 @@ const CaseForm: React.FC = () => {
     agenciesInvolved: [] as string[],
     status: 'Open'
   });
+
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -59,28 +69,87 @@ const CaseForm: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const handleFileInputClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const removeSelectedFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
     if (!formData.title || !formData.complainantName || !formData.openDate) {
-      alert('Please fill in all required fields');
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
       return;
     }
 
     if (formData.closeDate && new Date(formData.closeDate) < new Date(formData.openDate)) {
-      alert('Close date cannot be before open date');
+      toast({
+        title: "Invalid Date Range",
+        description: "Close date cannot be before open date",
+        variant: "destructive"
+      });
       return;
     }
 
-    // In a real app, this would save to a database
-    console.log('Form submitted:', formData);
-    alert('Case created successfully!');
-    navigate('/cases');
+    try {
+      // Create case with Google Drive integration
+      const caseData = {
+        ...formData,
+        openDate: new Date(formData.openDate),
+        closeDate: formData.closeDate ? new Date(formData.closeDate) : undefined,
+      };
+      
+      const newCase = await createCase(caseData);
+      
+      if (newCase) {
+        // Upload any selected files to the case folder
+        if (selectedFiles.length > 0) {
+          toast({
+            title: "Uploading Documents",
+            description: `Uploading ${selectedFiles.length} documents to the case...`
+          });
+          
+          for (const file of selectedFiles) {
+            await addDocumentToCase(newCase.id, file);
+          }
+        }
+        
+        toast({
+          title: "Case Created",
+          description: "The case has been created successfully and documents uploaded."
+        });
+        
+        navigate('/cases');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create case. Please try again.",
+        variant: "destructive"
+      });
+      console.error('Error creating case:', error);
+    }
   };
 
   const handleCancel = () => {
-    if (confirm('Are you sure you want to cancel? All changes will be lost.')) {
+    if (window.confirm('Are you sure you want to cancel? All changes will be lost.')) {
       navigate('/cases');
     }
   };
@@ -351,28 +420,76 @@ const CaseForm: React.FC = () => {
             <CardTitle className="text-xl">Documents</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-12 border-2 border-dashed rounded-lg">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              multiple
+            />
+            
+            <div 
+              className="text-center py-12 border-2 border-dashed rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+              onClick={handleFileInputClick}
+            >
               <FileUp className="h-12 w-12 mx-auto text-gray-400 mb-2" />
               <h3 className="text-lg font-medium mb-1">Upload Documents</h3>
               <p className="text-gray-500 mb-4">Drag and drop files here or click to browse</p>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" onClick={(e) => {
+                e.stopPropagation();
+                handleFileInputClick();
+              }}>
+                <Upload className="mr-2 h-4 w-4" />
                 Select Files
               </Button>
               <div className="mt-2 text-xs text-gray-500">
                 Supports PDF, Word, Excel, and image files
               </div>
             </div>
+            
+            {selectedFiles.length > 0 && (
+              <div className="mt-4">
+                <h4 className="font-medium mb-2">Selected Files ({selectedFiles.length})</h4>
+                <ul className="space-y-2">
+                  {selectedFiles.map((file, index) => (
+                    <li key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <div className="flex items-center">
+                        <FileUp className="h-4 w-4 text-blue-500 mr-2" />
+                        <span className="text-sm">{file.name}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSelectedFile(index)}
+                      >
+                        <X className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <div className="flex justify-end gap-3 mb-8">
-          <Button type="button" variant="outline" onClick={handleCancel}>
+          <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
             <X className="mr-2 h-4 w-4" />
             Cancel
           </Button>
-          <Button type="submit">
-            <Save className="mr-2 h-4 w-4" />
-            Save Case
+          <Button type="submit" disabled={loading}>
+            {loading ? (
+              <>
+                <span className="animate-spin mr-2">⌛</span>
+                Creating...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Case
+              </>
+            )}
           </Button>
         </div>
       </form>
